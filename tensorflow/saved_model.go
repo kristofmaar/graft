@@ -17,6 +17,7 @@ limitations under the License.
 package tensorflow
 
 import (
+	"errors"
 	"runtime"
 	"unsafe"
 
@@ -26,6 +27,7 @@ import (
 
 // #include <stdlib.h>
 // #include "tensorflow/c/c_api.h"
+// #include "tensorflow/c/c_api_experimental.h"
 import "C"
 
 // SavedModel represents the contents of loaded SavedModel.
@@ -34,6 +36,22 @@ type SavedModel struct {
 	Session    *Session
 	Graph      *Graph
 	Signatures map[string]Signature
+}
+
+func LoadMetalPluggableDevice() error {
+	raw_status := C.TF_NewStatus()
+	raw_lib := C.TF_LoadPluggableDeviceLibrary(C.CString("libmetal_plugin.dylib"), raw_status)
+
+	var err error = nil
+	if raw_lib == nil {
+		errorMessage := C.GoString(C.TF_Message(raw_status))
+		C.TF_DeleteStatus(raw_status)
+		err = errors.New(errorMessage)
+	}
+	if raw_status != nil {
+		C.TF_DeleteStatus(raw_status)
+	}
+	return err
 }
 
 // LoadSavedModel creates a new SavedModel from a model previously
